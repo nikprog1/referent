@@ -10,10 +10,10 @@ export default function Home() {
       fontFamily: 'system-ui, sans-serif'
     }}>
       <h1 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>
-        Welcome to Referent
+        Добро пожаловать в Referent
       </h1>
       <p style={{ fontSize: '1.2rem', color: '#666' }}>
-        A minimal Next.js application
+        Я изучаю Next.js
       </p>
     </main>
   )

@@ -1,6 +1,6 @@
 # Referent
 
-A minimal Next.js application.
+Я изучаю Next.js.
 
 ## Getting Started
 
