@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import cheerio from 'cheerio'
+import { createRequire } from 'module'
+
+const require = createRequire(import.meta.url)
+const cheerio = require('cheerio')
 
 export async function POST(request: NextRequest) {
   try {
