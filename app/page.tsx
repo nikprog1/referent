@@ -2,28 +2,66 @@
 
 import { useState } from 'react'
 
+interface ParsedData {
+  date: string
+  title: string
+  content: string
+}
+
 export default function Home() {
   const [url, setUrl] = useState('')
   const [result, setResult] = useState('')
   const [loading, setLoading] = useState(false)
   const [actionType, setActionType] = useState<string | null>(null)
+  const [parsedData, setParsedData] = useState<ParsedData | null>(null)
 
-  const handleSubmit = (action: 'summary' | 'thesis' | 'telegram') => {
+  const handleParse = async () => {
     if (!url.trim()) {
       alert('Пожалуйста, введите URL статьи')
       return
     }
 
     setLoading(true)
-    setActionType(action)
     setResult('')
+    setParsedData(null)
 
-    // Здесь будет логика подключения к AI
-    // Пока что просто имитация загрузки
-    setTimeout(() => {
-      setResult(`Результат для действия "${action}" будет здесь...`)
+    try {
+      const response = await fetch('/api/parse', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to parse article')
+      }
+
+      const data: ParsedData = await response.json()
+      setParsedData(data)
+      setResult(JSON.stringify(data, null, 2))
+    } catch (error) {
+      setResult(`Ошибка: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
       setLoading(false)
-    }, 1000)
+    }
+  }
+
+  const handleSubmit = async (action: 'summary' | 'thesis' | 'telegram') => {
+    if (!url.trim()) {
+      alert('Пожалуйста, введите URL статьи')
+      return
+    }
+
+    setActionType(action)
+    
+    // Сначала парсим статью
+    await handleParse()
+    
+    // Здесь будет логика подключения к AI после парсинга
+    // Пока что просто показываем результат парсинга
   }
 
   return (
@@ -53,28 +91,38 @@ export default function Home() {
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div className="mb-6">
           <button
-            onClick={() => handleSubmit('summary')}
+            onClick={handleParse}
             disabled={loading || !url.trim()}
-            className="px-6 py-4 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            className="w-full px-6 py-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors mb-4"
           >
-            О чем статья?
+            Парсить статью
           </button>
-          <button
-            onClick={() => handleSubmit('thesis')}
-            disabled={loading || !url.trim()}
-            className="px-6 py-4 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-          >
-            Тезисы
-          </button>
-          <button
-            onClick={() => handleSubmit('telegram')}
-            disabled={loading || !url.trim()}
-            className="px-6 py-4 bg-teal-600 text-white rounded-lg font-medium hover:bg-teal-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-          >
-            Пост для Telegram
-          </button>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <button
+              onClick={() => handleSubmit('summary')}
+              disabled={loading || !url.trim()}
+              className="px-6 py-4 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            >
+              О чем статья?
+            </button>
+            <button
+              onClick={() => handleSubmit('thesis')}
+              disabled={loading || !url.trim()}
+              className="px-6 py-4 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            >
+              Тезисы
+            </button>
+            <button
+              onClick={() => handleSubmit('telegram')}
+              disabled={loading || !url.trim()}
+              className="px-6 py-4 bg-teal-600 text-white rounded-lg font-medium hover:bg-teal-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            >
+              Пост для Telegram
+            </button>
+          </div>
         </div>
 
         <div className="bg-white rounded-xl shadow-lg p-6 min-h-[300px]">
@@ -96,11 +144,13 @@ export default function Home() {
             </div>
           ) : result ? (
             <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <p className="text-gray-800 whitespace-pre-wrap">{result}</p>
+              <pre className="text-sm text-gray-800 whitespace-pre-wrap overflow-x-auto">
+                {result}
+              </pre>
             </div>
           ) : (
             <div className="text-center py-12 text-gray-400">
-              <p>Введите URL статьи и выберите действие</p>
+              <p>Введите URL статьи и нажмите "Парсить статью"</p>
             </div>
           )}
         </div>
