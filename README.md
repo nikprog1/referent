@@ -1,6 +1,6 @@
 # Referent
 
-Я изучаю Next.js.
+Я изучаю-ю Next.js.
 
 ## Getting Started
 
