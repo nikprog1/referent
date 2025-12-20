@@ -13,9 +13,13 @@ export async function POST(request: NextRequest) {
 
     const apiKey = process.env.OPENROUTER_API_KEY
 
+    // Отладочная информация (удалить в продакшене)
+    console.log('OPENROUTER_API_KEY exists:', !!apiKey)
+    console.log('API Key length:', apiKey?.length || 0)
+
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'OpenRouter API key is not configured' },
+        { error: 'OpenRouter API key is not configured. Please check .env.local file and restart the server.' },
         { status: 500 }
       )
     }
