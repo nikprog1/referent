@@ -49,6 +49,39 @@ export default function Home() {
     }
   }
 
+  const handleTranslate = async () => {
+    if (!parsedData || !parsedData.content) {
+      alert('Сначала распарсите статью')
+      return
+    }
+
+    setLoading(true)
+    setActionType('translate')
+    setResult('Перевод...')
+
+    try {
+      const response = await fetch('/api/translate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ content: parsedData.content }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to translate article')
+      }
+
+      const data = await response.json()
+      setResult(data.translation)
+    } catch (error) {
+      setResult(`Ошибка: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleSubmit = async (action: 'summary' | 'thesis' | 'telegram') => {
     if (!url.trim()) {
       alert('Пожалуйста, введите URL статьи')
@@ -100,7 +133,14 @@ export default function Home() {
             Парсить статью
           </button>
           
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-4">
+            <button
+              onClick={handleTranslate}
+              disabled={loading || !parsedData}
+              className="px-6 py-4 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            >
+              Перевести
+            </button>
             <button
               onClick={() => handleSubmit('summary')}
               disabled={loading || !url.trim()}
@@ -130,7 +170,8 @@ export default function Home() {
             Результат
             {actionType && (
               <span className="ml-2 text-sm font-normal text-gray-500">
-                ({actionType === 'summary' && 'О чем статья?'}
+                ({actionType === 'translate' && 'Перевод'}
+                {actionType === 'summary' && 'О чем статья?'}
                 {actionType === 'thesis' && 'Тезисы'}
                 {actionType === 'telegram' && 'Пост для Telegram'})
               </span>
