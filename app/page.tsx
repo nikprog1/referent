@@ -96,16 +96,25 @@ export default function Home() {
       return
     }
 
+    // Очищаем предыдущие результаты
     setActionType(action)
+    setResult('')
     setLoading(true)
-    setResult('Обработка...')
 
     try {
       // Сначала парсим статью (без отображения результата)
-      const parsedData = await handleParse(false)
+      let articleData: ParsedData | null = parsedData
       
-      if (!parsedData || !parsedData.content) {
-        throw new Error('Не удалось распарсить статью')
+      // Если данных еще нет, парсим статью
+      if (!articleData || !articleData.content) {
+        setResult('Парсинг статьи...')
+        const parsed = await handleParse(false)
+        
+        if (!parsed || !parsed.content) {
+          throw new Error('Не удалось распарсить статью')
+        }
+        
+        articleData = parsed
       }
 
       // Определяем endpoint в зависимости от действия
@@ -124,14 +133,17 @@ export default function Home() {
           throw new Error('Неизвестное действие')
       }
 
+      // Показываем, что идет обработка AI
+      setResult('Обработка AI...')
+
       // Подготавливаем тело запроса
       const requestBody: { content: string; title?: string } = {
-        content: parsedData.content,
+        content: articleData.content,
       }
       
       // Для Telegram также передаем заголовок
-      if (action === 'telegram' && parsedData.title) {
-        requestBody.title = parsedData.title
+      if (action === 'telegram' && articleData.title) {
+        requestBody.title = articleData.title
       }
 
       // Вызываем соответствующий API endpoint
@@ -186,7 +198,7 @@ export default function Home() {
 
         <div className="mb-6">
           <button
-            onClick={handleParse}
+            onClick={() => handleParse()}
             disabled={loading || !url.trim()}
             className="w-full px-6 py-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors mb-4"
           >
