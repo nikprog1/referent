@@ -107,7 +107,6 @@ export default function Home() {
       
       // Если данных еще нет, парсим статью
       if (!articleData || !articleData.content) {
-        setResult('Парсинг статьи...')
         const parsed = await handleParse(false)
         
         if (!parsed || !parsed.content) {
@@ -132,9 +131,6 @@ export default function Home() {
         default:
           throw new Error('Неизвестное действие')
       }
-
-      // Показываем, что идет обработка AI
-      setResult('Обработка AI...')
 
       // Подготавливаем тело запроса
       const requestBody: { content: string; title?: string; sourceUrl?: string } = {
