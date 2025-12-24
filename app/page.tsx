@@ -15,14 +15,16 @@ export default function Home() {
   const [actionType, setActionType] = useState<string | null>(null)
   const [parsedData, setParsedData] = useState<ParsedData | null>(null)
 
-  const handleParse = async () => {
+  const handleParse = async (showResult: boolean = true): Promise<ParsedData | undefined> => {
     if (!url.trim()) {
       alert('Пожалуйста, введите URL статьи')
-      return
+      return undefined
     }
 
     setLoading(true)
-    setResult('')
+    if (showResult) {
+      setResult('')
+    }
     setParsedData(null)
 
     try {
@@ -41,9 +43,15 @@ export default function Home() {
 
       const data: ParsedData = await response.json()
       setParsedData(data)
-      setResult(JSON.stringify(data, null, 2))
+      if (showResult) {
+        setResult(JSON.stringify(data, null, 2))
+      }
+      return data
     } catch (error) {
-      setResult(`Ошибка: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      if (showResult) {
+        setResult(`Ошибка: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      }
+      throw error
     } finally {
       setLoading(false)
     }
@@ -89,12 +97,64 @@ export default function Home() {
     }
 
     setActionType(action)
-    
-    // Сначала парсим статью
-    await handleParse()
-    
-    // Здесь будет логика подключения к AI после парсинга
-    // Пока что просто показываем результат парсинга
+    setLoading(true)
+    setResult('Обработка...')
+
+    try {
+      // Сначала парсим статью (без отображения результата)
+      const parsedData = await handleParse(false)
+      
+      if (!parsedData || !parsedData.content) {
+        throw new Error('Не удалось распарсить статью')
+      }
+
+      // Определяем endpoint в зависимости от действия
+      let endpoint = ''
+      switch (action) {
+        case 'summary':
+          endpoint = '/api/summary'
+          break
+        case 'thesis':
+          endpoint = '/api/thesis'
+          break
+        case 'telegram':
+          endpoint = '/api/telegram'
+          break
+        default:
+          throw new Error('Неизвестное действие')
+      }
+
+      // Подготавливаем тело запроса
+      const requestBody: { content: string; title?: string } = {
+        content: parsedData.content,
+      }
+      
+      // Для Telegram также передаем заголовок
+      if (action === 'telegram' && parsedData.title) {
+        requestBody.title = parsedData.title
+      }
+
+      // Вызываем соответствующий API endpoint
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Ошибка при обработке статьи')
+      }
+
+      const data = await response.json()
+      setResult(data.result || data.error || 'Результат не получен')
+    } catch (error) {
+      setResult(`Ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
