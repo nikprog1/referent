@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
         messages: [
           {
             role: 'system',
-            content: 'You are a professional social media content creator specializing in Telegram posts. Create an engaging, well-formatted Telegram post in Russian based on the article. Requirements: 1) Use relevant emojis (2-4 emojis total), 2) Start with an attention-grabbing hook, 3) Use clear paragraphs with line breaks, 4) Include key information from the article, 5) Keep it concise (maximum 2000 characters), 6) Make it engaging and easy to read, 7) Always end the post with a source link in a natural format like "Источник: [URL]" or "Читать полностью: [URL]" if sourceUrl is provided. The link should be placed on a new line at the end. Return only the post text without any additional comments, explanations, or metadata.',
+            content: 'You are a professional social media content creator specializing in Telegram posts. Create an engaging, well-formatted Telegram post in Russian based on the article. Requirements: 1) Use relevant emojis (2-4 emojis total), 2) Start with an attention-grabbing hook, 3) Use clear paragraphs with line breaks, 4) Include key information from the article, 5) Keep it concise (maximum 2000 characters), 6) Make it engaging and easy to read, 7) If sourceUrl is provided, end the post with "Читать полностью:" followed by the source URL on a new line. The URL will be automatically converted to a clickable link, so just include it as plain text. Return only the post text without any additional comments, explanations, or metadata.',
           },
           {
             role: 'user',
@@ -75,13 +75,41 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const telegramPost = data.choices[0].message.content
+    let telegramPost = data.choices[0].message.content
 
     if (!telegramPost || telegramPost.trim().length === 0) {
       return NextResponse.json(
         { error: 'AI сервис вернул пустой результат. Попробуйте еще раз.' },
         { status: 500 }
       )
+    }
+
+    // Если есть URL источника, преобразуем его в кликабельную ссылку для Telegram
+    if (sourceUrl) {
+      telegramPost = telegramPost.trim()
+      
+      // Экранируем специальные символы для regex
+      const escapedUrl = sourceUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      const urlPattern = new RegExp(escapedUrl, 'i')
+      
+      // Проверяем, есть ли уже URL в тексте
+      if (urlPattern.test(telegramPost)) {
+        // Если URL уже есть в тексте, преобразуем его в кликабельную ссылку markdown
+        // Проверяем, не является ли уже ссылкой в формате markdown [текст](URL)
+        const markdownLinkPattern = new RegExp(`\\[([^\\]]+)\\]\\(${escapedUrl}\\)`, 'i')
+        const htmlLinkPattern = new RegExp(`<a[^>]+href=["']${escapedUrl}["'][^>]*>`, 'i')
+        
+        if (!markdownLinkPattern.test(telegramPost) && !htmlLinkPattern.test(telegramPost)) {
+          // URL есть, но не в формате ссылки - преобразуем в markdown
+          telegramPost = telegramPost.replace(
+            new RegExp(`(${escapedUrl})`, 'gi'),
+            `[$1]($1)`
+          )
+        }
+      } else {
+        // Если URL нет в тексте, добавляем его в конце как кликабельную ссылку
+        telegramPost += `\n\nЧитать полностью: [${sourceUrl}](${sourceUrl})`
+      }
     }
 
     return NextResponse.json({
