@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { validateContent, limitContent, handleOpenRouterError } from '../utils/errorHandler'
 
 export async function POST(request: NextRequest) {
   try {
     const { content, title } = await request.json()
 
-    if (!content || typeof content !== 'string') {
+    // Валидация входных данных
+    const validation = validateContent(content)
+    if (!validation.isValid) {
       return NextResponse.json(
-        { error: 'Content is required' },
+        { error: validation.error },
         { status: 400 }
       )
     }
@@ -15,15 +18,13 @@ export async function POST(request: NextRequest) {
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'OpenRouter API key is not configured. Please check .env.local file and restart the server.' },
+        { error: 'OpenRouter API ключ не настроен. Проверьте файл .env.local и перезапустите сервер.' },
         { status: 500 }
       )
     }
 
     // Ограничиваем длину контента для API
-    const limitedContent = content.length > 50000 
-      ? content.substring(0, 50000) + '...' 
-      : content
+    const limitedContent = limitContent(content)
 
     // Формируем промпт с заголовком, если он есть
     const userPrompt = title 
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
         messages: [
           {
             role: 'system',
-            content: 'You are a social media content creator. Create an engaging Telegram post in Russian based on the article. Include emojis, use clear formatting, make it interesting and informative. Maximum 2000 characters. Return only the post without any additional comments.',
+            content: 'You are a professional social media content creator specializing in Telegram posts. Create an engaging, well-formatted Telegram post in Russian based on the article. Requirements: 1) Use relevant emojis (2-4 emojis total), 2) Start with an attention-grabbing hook, 3) Use clear paragraphs with line breaks, 4) Include key information from the article, 5) Keep it concise (maximum 2000 characters), 6) Make it engaging and easy to read. Return only the post text without any additional comments, explanations, or metadata.',
           },
           {
             role: 'user',
@@ -57,42 +58,26 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
       console.error('OpenRouter API error:', errorData)
-      
-      const errorMessage = errorData.error?.message || response.statusText || 'Unknown error'
-      
-      if (errorMessage.includes('not available in your region') || errorMessage.includes('Access denied')) {
-        return NextResponse.json(
-          { error: 'Ошибка: Сервис недоступен в вашем регионе. Попробуйте использовать VPN или обратитесь к администратору.' },
-          { status: response.status }
-        )
-      } else if (errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
-        return NextResponse.json(
-          { error: 'Ошибка: Превышен лимит запросов. Попробуйте позже или проверьте настройки API ключа.' },
-          { status: response.status }
-        )
-      } else if (errorMessage.includes('invalid') || errorMessage.includes('unauthorized')) {
-        return NextResponse.json(
-          { error: 'Ошибка: Неверный API ключ. Проверьте настройки в файле .env.local' },
-          { status: response.status }
-        )
-      }
-      
-      return NextResponse.json(
-        { error: `Ошибка: ${errorMessage}` },
-        { status: response.status }
-      )
+      return handleOpenRouterError(errorData, response.status, response.statusText)
     }
 
     const data = await response.json()
 
     if (!data.choices || !data.choices[0] || !data.choices[0].message) {
       return NextResponse.json(
-        { error: 'Invalid response from AI service' },
+        { error: 'Некорректный ответ от AI сервиса. Попробуйте еще раз.' },
         { status: 500 }
       )
     }
 
     const telegramPost = data.choices[0].message.content
+
+    if (!telegramPost || telegramPost.trim().length === 0) {
+      return NextResponse.json(
+        { error: 'AI сервис вернул пустой результат. Попробуйте еще раз.' },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json({
       result: telegramPost.trim(),
@@ -100,7 +85,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Telegram post error:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Unknown error' },
+      { error: error instanceof Error ? `Ошибка при создании поста для Telegram: ${error.message}` : 'Неизвестная ошибка при обработке запроса' },
       { status: 500 }
     )
   }

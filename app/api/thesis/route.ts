@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { validateContent, limitContent, handleOpenRouterError } from '../utils/errorHandler'
 
 export async function POST(request: NextRequest) {
   try {
     const { content } = await request.json()
 
-    if (!content || typeof content !== 'string') {
+    // Валидация входных данных
+    const validation = validateContent(content)
+    if (!validation.isValid) {
       return NextResponse.json(
-        { error: 'Content is required' },
+        { error: validation.error },
         { status: 400 }
       )
     }
@@ -15,15 +18,13 @@ export async function POST(request: NextRequest) {
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'OpenRouter API key is not configured. Please check .env.local file and restart the server.' },
+        { error: 'OpenRouter API ключ не настроен. Проверьте файл .env.local и перезапустите сервер.' },
         { status: 500 }
       )
     }
 
     // Ограничиваем длину контента для API
-    const limitedContent = content.length > 50000 
-      ? content.substring(0, 50000) + '...' 
-      : content
+    const limitedContent = limitContent(content)
 
     // Отправляем запрос к OpenRouter API
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -39,11 +40,11 @@ export async function POST(request: NextRequest) {
         messages: [
           {
             role: 'system',
-            content: 'You are an expert at creating article summaries. Create a structured list of key points (theses) from the article in Russian. Format as a numbered or bulleted list. Return only the theses without any additional comments.',
+            content: 'You are an expert at creating article summaries. Create a structured list of key points (theses) from the article in Russian. Format as a numbered list (1., 2., 3., etc.). Each thesis should be clear, concise, and capture an important idea from the article. Return only the numbered list of theses without any additional comments, introductions, or conclusions.',
           },
           {
             role: 'user',
-            content: `Create key theses from this article in Russian:\n\n${limitedContent}`,
+            content: `Создай структурированный список ключевых тезисов из этой статьи на русском языке. Каждый тезис должен быть пронумерован и содержать важную идею из статьи:\n\n${limitedContent}`,
           },
         ],
       }),
@@ -52,42 +53,26 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
       console.error('OpenRouter API error:', errorData)
-      
-      const errorMessage = errorData.error?.message || response.statusText || 'Unknown error'
-      
-      if (errorMessage.includes('not available in your region') || errorMessage.includes('Access denied')) {
-        return NextResponse.json(
-          { error: 'Ошибка: Сервис недоступен в вашем регионе. Попробуйте использовать VPN или обратитесь к администратору.' },
-          { status: response.status }
-        )
-      } else if (errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
-        return NextResponse.json(
-          { error: 'Ошибка: Превышен лимит запросов. Попробуйте позже или проверьте настройки API ключа.' },
-          { status: response.status }
-        )
-      } else if (errorMessage.includes('invalid') || errorMessage.includes('unauthorized')) {
-        return NextResponse.json(
-          { error: 'Ошибка: Неверный API ключ. Проверьте настройки в файле .env.local' },
-          { status: response.status }
-        )
-      }
-      
-      return NextResponse.json(
-        { error: `Ошибка: ${errorMessage}` },
-        { status: response.status }
-      )
+      return handleOpenRouterError(errorData, response.status, response.statusText)
     }
 
     const data = await response.json()
 
     if (!data.choices || !data.choices[0] || !data.choices[0].message) {
       return NextResponse.json(
-        { error: 'Invalid response from AI service' },
+        { error: 'Некорректный ответ от AI сервиса. Попробуйте еще раз.' },
         { status: 500 }
       )
     }
 
     const thesis = data.choices[0].message.content
+
+    if (!thesis || thesis.trim().length === 0) {
+      return NextResponse.json(
+        { error: 'AI сервис вернул пустой результат. Попробуйте еще раз.' },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json({
       result: thesis.trim(),
@@ -95,7 +80,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Thesis error:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Unknown error' },
+      { error: error instanceof Error ? `Ошибка при создании тезисов: ${error.message}` : 'Неизвестная ошибка при обработке запроса' },
       { status: 500 }
     )
   }

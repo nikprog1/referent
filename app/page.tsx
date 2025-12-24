@@ -156,14 +156,38 @@ export default function Home() {
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Ошибка при обработке статьи')
+        let errorMessage = 'Ошибка при обработке статьи'
+        try {
+          const error = await response.json()
+          errorMessage = error.error || errorMessage
+        } catch (e) {
+          // Если не удалось распарсить JSON с ошибкой
+          if (response.status === 400) {
+            errorMessage = 'Неверный запрос. Проверьте, что статья была успешно распарсена.'
+          } else if (response.status === 500) {
+            errorMessage = 'Внутренняя ошибка сервера. Попробуйте позже.'
+          } else if (response.status === 503) {
+            errorMessage = 'Сервис временно недоступен. Попробуйте позже.'
+          }
+        }
+        throw new Error(errorMessage)
       }
 
       const data = await response.json()
-      setResult(data.result || data.error || 'Результат не получен')
+      
+      if (data.error) {
+        throw new Error(data.error)
+      }
+      
+      if (!data.result || data.result.trim().length === 0) {
+        throw new Error('Получен пустой результат. Попробуйте еще раз.')
+      }
+      
+      setResult(data.result)
     } catch (error) {
-      setResult(`Ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`)
+      const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка'
+      setResult(`Ошибка: ${errorMessage}`)
+      console.error('Error in handleSubmit:', error)
     } finally {
       setLoading(false)
     }
