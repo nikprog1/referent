@@ -287,29 +287,53 @@ export default function Home() {
             <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
               <div 
                 className="text-sm text-gray-800 whitespace-pre-wrap overflow-x-auto"
-                dangerouslySetInnerHTML={{ 
-                  __html: result
-                    // Преобразуем markdown ссылки [текст](URL) в HTML ссылки
-                    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, text, url) => {
-                      // Проверяем, что это валидный URL
-                      if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
-                        // Экранируем HTML в тексте и URL ссылки
-                        const escapedText = text
-                          .replace(/&/g, '&amp;')
-                          .replace(/</g, '&lt;')
-                          .replace(/>/g, '&gt;')
-                          .replace(/"/g, '&quot;')
-                        const escapedUrl = url
-                          .replace(/&/g, '&amp;')
-                          .replace(/</g, '&lt;')
-                          .replace(/>/g, '&gt;')
-                          .replace(/"/g, '&quot;')
-                        return `<a href="${escapedUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 underline">${escapedText}</a>`
-                      }
-                      return match
-                    })
-                }}
-              />
+                style={{ lineHeight: '1.6' }}
+              >
+                {(() => {
+                  // Преобразуем markdown ссылки [текст](URL) в React элементы
+                  const parts: (string | JSX.Element)[] = []
+                  let lastIndex = 0
+                  const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g
+                  let match
+                  
+                  while ((match = linkRegex.exec(result)) !== null) {
+                    // Добавляем текст до ссылки
+                    if (match.index > lastIndex) {
+                      parts.push(result.substring(lastIndex, match.index))
+                    }
+                    
+                    // Проверяем, что это валидный URL
+                    const url = match[2]
+                    const text = match[1]
+                    if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+                      // Создаем кликабельную ссылку
+                      parts.push(
+                        <a
+                          key={match.index}
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 underline cursor-pointer transition-colors"
+                        >
+                          {text}
+                        </a>
+                      )
+                    } else {
+                      // Если не валидный URL, оставляем как есть
+                      parts.push(match[0])
+                    }
+                    
+                    lastIndex = match.index + match[0].length
+                  }
+                  
+                  // Добавляем оставшийся текст
+                  if (lastIndex < result.length) {
+                    parts.push(result.substring(lastIndex))
+                  }
+                  
+                  return parts.length > 0 ? parts : result
+                })()}
+              </div>
             </div>
           ) : (
             <div className="text-center py-12 text-gray-400">
