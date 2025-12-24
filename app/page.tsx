@@ -285,9 +285,31 @@ export default function Home() {
             </div>
           ) : result ? (
             <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <pre className="text-sm text-gray-800 whitespace-pre-wrap overflow-x-auto">
-                {result}
-              </pre>
+              <div 
+                className="text-sm text-gray-800 whitespace-pre-wrap overflow-x-auto"
+                dangerouslySetInnerHTML={{ 
+                  __html: result
+                    // Преобразуем markdown ссылки [текст](URL) в HTML ссылки
+                    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, text, url) => {
+                      // Проверяем, что это валидный URL
+                      if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+                        // Экранируем HTML в тексте и URL ссылки
+                        const escapedText = text
+                          .replace(/&/g, '&amp;')
+                          .replace(/</g, '&lt;')
+                          .replace(/>/g, '&gt;')
+                          .replace(/"/g, '&quot;')
+                        const escapedUrl = url
+                          .replace(/&/g, '&amp;')
+                          .replace(/</g, '&lt;')
+                          .replace(/>/g, '&gt;')
+                          .replace(/"/g, '&quot;')
+                        return `<a href="${escapedUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 underline">${escapedText}</a>`
+                      }
+                      return match
+                    })
+                }}
+              />
             </div>
           ) : (
             <div className="text-center py-12 text-gray-400">
