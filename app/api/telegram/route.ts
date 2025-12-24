@@ -3,7 +3,7 @@ import { validateContent, limitContent, handleOpenRouterError } from '../utils/e
 
 export async function POST(request: NextRequest) {
   try {
-    const { content, title } = await request.json()
+    const { content, title, sourceUrl } = await request.json()
 
     // Валидация входных данных
     const validation = validateContent(content)
@@ -26,10 +26,15 @@ export async function POST(request: NextRequest) {
     // Ограничиваем длину контента для API
     const limitedContent = limitContent(content)
 
-    // Формируем промпт с заголовком, если он есть
-    const userPrompt = title 
-      ? `Create a Telegram post in Russian based on this article:\n\nTitle: ${title}\n\nContent: ${limitedContent}`
-      : `Create a Telegram post in Russian based on this article:\n\n${limitedContent}`
+    // Формируем промпт с заголовком и URL источника, если они есть
+    let userPrompt = `Create a Telegram post in Russian based on this article:\n\n`
+    if (title) {
+      userPrompt += `Title: ${title}\n\n`
+    }
+    userPrompt += `Content: ${limitedContent}`
+    if (sourceUrl) {
+      userPrompt += `\n\nSource URL: ${sourceUrl}`
+    }
 
     // Отправляем запрос к OpenRouter API
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -45,7 +50,7 @@ export async function POST(request: NextRequest) {
         messages: [
           {
             role: 'system',
-            content: 'You are a professional social media content creator specializing in Telegram posts. Create an engaging, well-formatted Telegram post in Russian based on the article. Requirements: 1) Use relevant emojis (2-4 emojis total), 2) Start with an attention-grabbing hook, 3) Use clear paragraphs with line breaks, 4) Include key information from the article, 5) Keep it concise (maximum 2000 characters), 6) Make it engaging and easy to read. Return only the post text without any additional comments, explanations, or metadata.',
+            content: 'You are a professional social media content creator specializing in Telegram posts. Create an engaging, well-formatted Telegram post in Russian based on the article. Requirements: 1) Use relevant emojis (2-4 emojis total), 2) Start with an attention-grabbing hook, 3) Use clear paragraphs with line breaks, 4) Include key information from the article, 5) Keep it concise (maximum 2000 characters), 6) Make it engaging and easy to read, 7) Always end the post with a source link in a natural format like "Источник: [URL]" or "Читать полностью: [URL]" if sourceUrl is provided. The link should be placed on a new line at the end. Return only the post text without any additional comments, explanations, or metadata.',
           },
           {
             role: 'user',

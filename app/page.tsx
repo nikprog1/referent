@@ -137,13 +137,17 @@ export default function Home() {
       setResult('Обработка AI...')
 
       // Подготавливаем тело запроса
-      const requestBody: { content: string; title?: string } = {
+      const requestBody: { content: string; title?: string; sourceUrl?: string } = {
         content: articleData.content,
       }
       
-      // Для Telegram также передаем заголовок
-      if (action === 'telegram' && articleData.title) {
-        requestBody.title = articleData.title
+      // Для Telegram также передаем заголовок и URL источника
+      if (action === 'telegram') {
+        if (articleData.title) {
+          requestBody.title = articleData.title
+        }
+        // Передаем URL источника для добавления ссылки в конце поста
+        requestBody.sourceUrl = url.trim()
       }
 
       // Вызываем соответствующий API endpoint
