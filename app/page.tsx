@@ -424,18 +424,18 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-6 sm:py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-10">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+        <div className="text-center mb-6 sm:mb-10">
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
             Referent
           </h1>
-          <p className="text-lg text-gray-600">
+          <p className="text-base sm:text-lg text-gray-600 px-2">
             Анализ англоязычных статей с помощью AI
           </p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+        <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-4 sm:mb-6">
           <label htmlFor="url" className="block text-sm font-medium text-gray-700 mb-2">
             URL англоязычной статьи
           </label>
@@ -445,30 +445,30 @@ export default function Home() {
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="Введите URL статьи, например: https://example.com/article"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
             disabled={loading}
           />
-          <p className="mt-2 text-xs text-gray-500">
+          <p className="mt-2 text-xs text-gray-500 px-1">
             Укажите ссылку на англоязычную статью
           </p>
         </div>
 
-        <div className="mb-6">
+        <div className="mb-4 sm:mb-6">
           <button
             onClick={handleParseAndTranslate}
             disabled={loading || !url.trim()}
             title="Загрузить статью и перевести на русский язык"
-            className="w-full px-6 py-4 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors mb-4"
+            className="w-full px-4 sm:px-6 py-3 sm:py-4 bg-green-600 text-white text-sm sm:text-base rounded-lg font-medium hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors mb-4"
           >
             Парсить и перевести
           </button>
           
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4">
             <button
               onClick={() => handleSubmit('summary')}
               disabled={loading || !url.trim()}
               title="Получить краткое описание статьи на русском языке"
-              className="px-6 py-4 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+              className="w-full px-4 sm:px-6 py-3 sm:py-4 bg-indigo-600 text-white text-sm sm:text-base rounded-lg font-medium hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
             >
               О чем статья?
             </button>
@@ -476,7 +476,7 @@ export default function Home() {
               onClick={() => handleSubmit('thesis')}
               disabled={loading || !url.trim()}
               title="Создать структурированный список ключевых тезисов статьи"
-              className="px-6 py-4 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+              className="w-full px-4 sm:px-6 py-3 sm:py-4 bg-purple-600 text-white text-sm sm:text-base rounded-lg font-medium hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
             >
               Тезисы
             </button>
@@ -484,7 +484,7 @@ export default function Home() {
               onClick={() => handleSubmit('telegram')}
               disabled={loading || !url.trim()}
               title="Создать готовый пост для Telegram с ссылкой на источник"
-              className="px-6 py-4 bg-teal-600 text-white rounded-lg font-medium hover:bg-teal-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+              className="w-full px-4 sm:px-6 py-3 sm:py-4 bg-teal-600 text-white text-sm sm:text-base rounded-lg font-medium hover:bg-teal-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
             >
               Пост для Telegram
             </button>
@@ -494,7 +494,7 @@ export default function Home() {
             onClick={handleClear}
             disabled={loading}
             title="Очистить все поля и результаты"
-            className="w-full px-6 py-3 bg-gray-500 text-white rounded-lg font-medium hover:bg-gray-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors mt-4"
+            className="w-full px-4 sm:px-6 py-2.5 sm:py-3 bg-gray-500 text-white text-sm sm:text-base rounded-lg font-medium hover:bg-gray-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors mt-4"
           >
             Очистить
           </button>
@@ -502,10 +502,10 @@ export default function Home() {
 
         {/* Блок текущего процесса */}
         {currentProcess && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 mb-4">
             <div className="flex items-center">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-              <span className="text-sm text-blue-800">{currentProcess}</span>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2 flex-shrink-0"></div>
+              <span className="text-sm text-blue-800 break-words">{currentProcess}</span>
             </div>
           </div>
         )}
@@ -521,16 +521,16 @@ export default function Home() {
               {error.stage === 'telegram' && 'Ошибка создания поста'}
               {!error.stage && 'Ошибка'}
             </AlertTitle>
-            <AlertDescription>{error.message}</AlertDescription>
+            <AlertDescription className="break-words">{error.message}</AlertDescription>
           </Alert>
         )}
 
-        <div ref={resultRef} className="bg-white rounded-xl shadow-lg p-6 min-h-[300px]">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-800">
+        <div ref={resultRef} className="bg-white rounded-xl shadow-lg p-4 sm:p-6 min-h-[300px]">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-800">
               Результат
               {actionType && (
-                <span className="ml-2 text-sm font-normal text-gray-500">
+                <span className="ml-2 text-xs sm:text-sm font-normal text-gray-500">
                   ({actionType === 'translate' && 'Перевод'}
                   {actionType === 'summary' && 'О чем статья?'}
                   {actionType === 'thesis' && 'Тезисы'}
@@ -542,21 +542,23 @@ export default function Home() {
               <button
                 onClick={handleCopy}
                 title="Копировать результат"
-                className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
+                className="px-3 sm:px-4 py-2 bg-blue-600 text-white text-xs sm:text-sm rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 self-start sm:self-auto"
               >
                 {copied ? (
                   <>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    Скопировано
+                    <span className="hidden sm:inline">Скопировано</span>
+                    <span className="sm:hidden">Скопировано</span>
                   </>
                 ) : (
                   <>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>
-                    Копировать
+                    <span className="hidden sm:inline">Копировать</span>
+                    <span className="sm:hidden">Копировать</span>
                   </>
                 )}
               </button>
@@ -565,14 +567,14 @@ export default function Home() {
           
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-              <span className="ml-4 text-gray-600">Обработка...</span>
+              <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-indigo-600"></div>
+              <span className="ml-4 text-sm sm:text-base text-gray-600">Обработка...</span>
             </div>
           ) : result ? (
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+            <div className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200">
               <div 
-                className="text-sm text-gray-800 whitespace-pre-wrap overflow-x-auto"
-                style={{ lineHeight: '1.6' }}
+                className="text-sm sm:text-base text-gray-800 whitespace-pre-wrap break-words overflow-x-auto"
+                style={{ lineHeight: '1.6', wordBreak: 'break-word' }}
               >
                 {(() => {
                   // Преобразуем markdown ссылки [текст](URL) в React элементы
@@ -598,7 +600,7 @@ export default function Home() {
                           href={url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-800 underline cursor-pointer transition-colors"
+                          className="text-blue-600 hover:text-blue-800 underline cursor-pointer transition-colors break-all"
                         >
                           {text}
                         </a>
@@ -621,8 +623,8 @@ export default function Home() {
               </div>
             </div>
           ) : (
-            <div className="text-center py-12 text-gray-400">
-              <p>Введите URL статьи и нажмите "Парсить и перевести"</p>
+            <div className="text-center py-12 px-4 text-gray-400">
+              <p className="text-sm sm:text-base">Введите URL статьи и нажмите "Парсить и перевести"</p>
             </div>
           )}
         </div>
