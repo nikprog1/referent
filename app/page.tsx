@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { getParseError, getTranslationError, getAIError, ErrorInfo } from '@/lib/errorMessages'
 
 interface ParsedData {
   date: string
@@ -15,6 +17,7 @@ export default function Home() {
   const [actionType, setActionType] = useState<string | null>(null)
   const [parsedData, setParsedData] = useState<ParsedData | null>(null)
   const [currentProcess, setCurrentProcess] = useState<string | null>(null)
+  const [error, setError] = useState<ErrorInfo | null>(null)
 
   const handleParse = async (showResult: boolean = true): Promise<ParsedData | undefined> => {
     if (!url.trim()) {
@@ -69,58 +72,119 @@ export default function Home() {
     setLoading(true)
     setActionType('translate')
     setResult('')
+    setError(null)
     setParsedData(null)
 
     try {
       // Этап 1: Парсинг
       setCurrentProcess('Загружаю статью...')
       
-      const parseResponse = await fetch('/api/parse', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url }),
-      })
-
-      if (!parseResponse.ok) {
-        const error = await parseResponse.json()
-        throw new Error(`Ошибка парсинга: ${error.error || 'Не удалось загрузить статью'}`)
+      let parseResponse: Response | null = null
+      try {
+        parseResponse = await fetch('/api/parse', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ url }),
+        })
+      } catch (fetchError) {
+        // Ошибка сети при парсинге
+        const errorInfo = getParseError(null, fetchError)
+        setError(errorInfo)
+        return
       }
 
-      const parsedData: ParsedData = await parseResponse.json()
+      if (!parseResponse.ok) {
+        let apiError: unknown = null
+        try {
+          apiError = await parseResponse.json()
+        } catch {
+          // Не удалось распарсить JSON ошибки
+        }
+        const errorInfo = getParseError(parseResponse, apiError)
+        setError(errorInfo)
+        return
+      }
+
+      let parsedData: ParsedData
+      try {
+        parsedData = await parseResponse.json()
+      } catch (parseError) {
+        const errorInfo = getParseError(parseResponse, parseError)
+        setError(errorInfo)
+        return
+      }
+
       setParsedData(parsedData)
 
       if (!parsedData.content || parsedData.content.trim().length === 0) {
-        throw new Error('Ошибка парсинга: Статья не содержит контента')
+        const errorInfo: ErrorInfo = {
+          message: 'Статья не содержит текстового контента для обработки.',
+          stage: 'parsing'
+        }
+        setError(errorInfo)
+        return
       }
 
       // Этап 2: Перевод
       setCurrentProcess('Перевожу статью...')
 
-      const translateResponse = await fetch('/api/translate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ content: parsedData.content }),
-      })
-
-      if (!translateResponse.ok) {
-        const error = await translateResponse.json()
-        throw new Error(`Ошибка перевода: ${error.error || 'Не удалось перевести статью'}`)
+      let translateResponse: Response | null = null
+      try {
+        translateResponse = await fetch('/api/translate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ content: parsedData.content }),
+        })
+      } catch (fetchError) {
+        // Ошибка сети при переводе
+        const errorInfo = getTranslationError(null, fetchError)
+        setError(errorInfo)
+        return
       }
 
-      const translateData = await translateResponse.json()
+      if (!translateResponse.ok) {
+        let apiError: unknown = null
+        try {
+          apiError = await translateResponse.json()
+        } catch {
+          // Не удалось распарсить JSON ошибки
+        }
+        const errorInfo = getTranslationError(translateResponse, apiError)
+        setError(errorInfo)
+        return
+      }
+
+      let translateData
+      try {
+        translateData = await translateResponse.json()
+      } catch (parseError) {
+        const errorInfo = getTranslationError(translateResponse, parseError)
+        setError(errorInfo)
+        return
+      }
       
       if (!translateData.translation || translateData.translation.trim().length === 0) {
-        throw new Error('Ошибка перевода: Получен пустой перевод')
+        const errorInfo: ErrorInfo = {
+          message: 'Ошибка перевода: получен пустой перевод.',
+          stage: 'translation'
+        }
+        setError(errorInfo)
+        return
       }
 
       setResult(translateData.translation)
+      setError(null)
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка'
-      setResult(`Ошибка: ${errorMessage}`)
+      // Неожиданная ошибка
+      const errorInfo: ErrorInfo = {
+        message: 'Произошла неожиданная ошибка. Попробуйте еще раз.',
+        stage: error instanceof Error && error.message.includes('парсинга') ? 'parsing' : 'translation'
+      }
+      setError(errorInfo)
       console.error('Error in handleParseAndTranslate:', error)
     } finally {
       setLoading(false)
@@ -137,6 +201,7 @@ export default function Home() {
     // Очищаем предыдущие результаты
     setActionType(action)
     setResult('')
+    setError(null)
     setLoading(true)
     
     // Устанавливаем процесс в зависимости от действия
@@ -153,14 +218,56 @@ export default function Home() {
       
       // Если данных еще нет, парсим статью
       if (!articleData || !articleData.content) {
-        const parsed = await handleParse(false)
+        setCurrentProcess('Загружаю статью...')
         
-        if (!parsed || !parsed.content) {
-          throw new Error('Не удалось распарсить статью')
+        let parseResponse: Response | null = null
+        try {
+          parseResponse = await fetch('/api/parse', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ url }),
+          })
+        } catch (fetchError) {
+          const errorInfo = getParseError(null, fetchError)
+          setError(errorInfo)
+          return
+        }
+
+        if (!parseResponse.ok) {
+          let apiError: unknown = null
+          try {
+            apiError = await parseResponse.json()
+          } catch {
+            // Не удалось распарсить JSON ошибки
+          }
+          const errorInfo = getParseError(parseResponse, apiError)
+          setError(errorInfo)
+          return
+        }
+
+        try {
+          articleData = await parseResponse.json()
+          setParsedData(articleData)
+        } catch (parseError) {
+          const errorInfo = getParseError(parseResponse, parseError)
+          setError(errorInfo)
+          return
         }
         
-        articleData = parsed
+        if (!articleData || !articleData.content) {
+          const errorInfo: ErrorInfo = {
+            message: 'Статья не содержит текстового контента для обработки.',
+            stage: 'parsing'
+          }
+          setError(errorInfo)
+          return
+        }
       }
+
+      // Возвращаем процесс к AI обработке
+      setCurrentProcess(processMessages[action] || 'Обрабатываю...')
 
       // Определяем endpoint в зависимости от действия
       let endpoint = ''
@@ -175,7 +282,12 @@ export default function Home() {
           endpoint = '/api/telegram'
           break
         default:
-          throw new Error('Неизвестное действие')
+          const errorInfo: ErrorInfo = {
+            message: 'Неизвестное действие.',
+            stage: action
+          }
+          setError(errorInfo)
+          return
       }
 
       // Подготавливаем тело запроса
@@ -193,46 +305,66 @@ export default function Home() {
       }
 
       // Вызываем соответствующий API endpoint
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      })
-
-      if (!response.ok) {
-        let errorMessage = 'Ошибка при обработке статьи'
-        try {
-          const error = await response.json()
-          errorMessage = error.error || errorMessage
-        } catch (e) {
-          // Если не удалось распарсить JSON с ошибкой
-          if (response.status === 400) {
-            errorMessage = 'Неверный запрос. Проверьте, что статья была успешно распарсена.'
-          } else if (response.status === 500) {
-            errorMessage = 'Внутренняя ошибка сервера. Попробуйте позже.'
-          } else if (response.status === 503) {
-            errorMessage = 'Сервис временно недоступен. Попробуйте позже.'
-          }
-        }
-        throw new Error(errorMessage)
+      let response: Response | null = null
+      try {
+        response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+        })
+      } catch (fetchError) {
+        const errorInfo = getAIError(null, fetchError, action)
+        setError(errorInfo)
+        return
       }
 
-      const data = await response.json()
+      if (!response.ok) {
+        let apiError: unknown = null
+        try {
+          apiError = await response.json()
+        } catch {
+          // Не удалось распарсить JSON ошибки
+        }
+        const errorInfo = getAIError(response, apiError, action)
+        setError(errorInfo)
+        return
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (parseError) {
+        const errorInfo = getAIError(response, parseError, action)
+        setError(errorInfo)
+        return
+      }
       
       if (data.error) {
-        throw new Error(data.error)
+        const errorInfo = getAIError(response, new Error(data.error), action)
+        setError(errorInfo)
+        return
       }
       
       if (!data.result || data.result.trim().length === 0) {
-        throw new Error('Получен пустой результат. Попробуйте еще раз.')
+        const errorInfo: ErrorInfo = {
+          message: 'Получен пустой результат. Попробуйте еще раз.',
+          stage: action
+        }
+        setError(errorInfo)
+        return
       }
       
       setResult(data.result)
+      setError(null)
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка'
-      setResult(`Ошибка: ${errorMessage}`)
+      // Неожиданная ошибка
+      const errorInfo: ErrorInfo = {
+        message: 'Произошла неожиданная ошибка. Попробуйте еще раз.',
+        stage: action
+      }
+      setError(errorInfo)
       console.error('Error in handleSubmit:', error)
     } finally {
       setLoading(false)
@@ -316,6 +448,21 @@ export default function Home() {
               <span className="text-sm text-blue-800">{currentProcess}</span>
             </div>
           </div>
+        )}
+
+        {/* Блок ошибок */}
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertTitle>
+              {error.stage === 'parsing' && 'Ошибка загрузки статьи'}
+              {error.stage === 'translation' && 'Ошибка перевода'}
+              {error.stage === 'summary' && 'Ошибка анализа'}
+              {error.stage === 'thesis' && 'Ошибка создания тезисов'}
+              {error.stage === 'telegram' && 'Ошибка создания поста'}
+              {!error.stage && 'Ошибка'}
+            </AlertTitle>
+            <AlertDescription>{error.message}</AlertDescription>
+          </Alert>
         )}
 
         <div className="bg-white rounded-xl shadow-lg p-6 min-h-[300px]">
