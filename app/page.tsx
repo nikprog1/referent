@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { getParseError, getTranslationError, getAIError, ErrorInfo } from '@/lib/errorMessages'
 
@@ -18,6 +18,57 @@ export default function Home() {
   const [parsedData, setParsedData] = useState<ParsedData | null>(null)
   const [currentProcess, setCurrentProcess] = useState<string | null>(null)
   const [error, setError] = useState<ErrorInfo | null>(null)
+  const [copied, setCopied] = useState(false)
+  const resultRef = useRef<HTMLDivElement>(null)
+
+  // Автоматическая прокрутка к результатам после успешной генерации
+  useEffect(() => {
+    if (result && !loading && !error && resultRef.current) {
+      setTimeout(() => {
+        resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 100)
+    }
+  }, [result, loading, error])
+
+  // Функция очистки всех состояний
+  const handleClear = () => {
+    setUrl('')
+    setResult('')
+    setLoading(false)
+    setActionType(null)
+    setParsedData(null)
+    setCurrentProcess(null)
+    setError(null)
+    setCopied(false)
+  }
+
+  // Функция копирования результата
+  const handleCopy = async () => {
+    if (!result) return
+    
+    try {
+      await navigator.clipboard.writeText(result)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error('Ошибка при копировании:', err)
+      // Fallback для старых браузеров
+      const textArea = document.createElement('textarea')
+      textArea.value = result
+      textArea.style.position = 'fixed'
+      textArea.style.opacity = '0'
+      document.body.appendChild(textArea)
+      textArea.select()
+      try {
+        document.execCommand('copy')
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      } catch (fallbackErr) {
+        console.error('Ошибка при копировании (fallback):', fallbackErr)
+      }
+      document.body.removeChild(textArea)
+    }
+  }
 
   const handleParse = async (showResult: boolean = true): Promise<ParsedData | undefined> => {
     if (!url.trim()) {
@@ -438,6 +489,15 @@ export default function Home() {
               Пост для Telegram
             </button>
           </div>
+          
+          <button
+            onClick={handleClear}
+            disabled={loading}
+            title="Очистить все поля и результаты"
+            className="w-full px-6 py-3 bg-gray-500 text-white rounded-lg font-medium hover:bg-gray-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors mt-4"
+          >
+            Очистить
+          </button>
         </div>
 
         {/* Блок текущего процесса */}
@@ -465,18 +525,43 @@ export default function Home() {
           </Alert>
         )}
 
-        <div className="bg-white rounded-xl shadow-lg p-6 min-h-[300px]">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">
-            Результат
-            {actionType && (
-              <span className="ml-2 text-sm font-normal text-gray-500">
-                ({actionType === 'translate' && 'Перевод'}
-                {actionType === 'summary' && 'О чем статья?'}
-                {actionType === 'thesis' && 'Тезисы'}
-                {actionType === 'telegram' && 'Пост для Telegram'})
-              </span>
+        <div ref={resultRef} className="bg-white rounded-xl shadow-lg p-6 min-h-[300px]">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-gray-800">
+              Результат
+              {actionType && (
+                <span className="ml-2 text-sm font-normal text-gray-500">
+                  ({actionType === 'translate' && 'Перевод'}
+                  {actionType === 'summary' && 'О чем статья?'}
+                  {actionType === 'thesis' && 'Тезисы'}
+                  {actionType === 'telegram' && 'Пост для Telegram'})
+                </span>
+              )}
+            </h2>
+            {result && !loading && (
+              <button
+                onClick={handleCopy}
+                title="Копировать результат"
+                className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
+              >
+                {copied ? (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Скопировано
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    Копировать
+                  </>
+                )}
+              </button>
             )}
-          </h2>
+          </div>
           
           {loading ? (
             <div className="flex items-center justify-center py-12">
