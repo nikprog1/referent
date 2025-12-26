@@ -60,19 +60,45 @@ export default function Home() {
     }
   }
 
-  const handleTranslate = async () => {
-    if (!parsedData || !parsedData.content) {
-      alert('Сначала распарсите статью')
+  const handleParseAndTranslate = async () => {
+    if (!url.trim()) {
+      alert('Пожалуйста, введите URL статьи')
       return
     }
 
     setLoading(true)
     setActionType('translate')
-    setCurrentProcess('Перевожу статью...')
     setResult('')
+    setParsedData(null)
 
     try {
-      const response = await fetch('/api/translate', {
+      // Этап 1: Парсинг
+      setCurrentProcess('Загружаю статью...')
+      
+      const parseResponse = await fetch('/api/parse', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url }),
+      })
+
+      if (!parseResponse.ok) {
+        const error = await parseResponse.json()
+        throw new Error(`Ошибка парсинга: ${error.error || 'Не удалось загрузить статью'}`)
+      }
+
+      const parsedData: ParsedData = await parseResponse.json()
+      setParsedData(parsedData)
+
+      if (!parsedData.content || parsedData.content.trim().length === 0) {
+        throw new Error('Ошибка парсинга: Статья не содержит контента')
+      }
+
+      // Этап 2: Перевод
+      setCurrentProcess('Перевожу статью...')
+
+      const translateResponse = await fetch('/api/translate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -80,15 +106,22 @@ export default function Home() {
         body: JSON.stringify({ content: parsedData.content }),
       })
 
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to translate article')
+      if (!translateResponse.ok) {
+        const error = await translateResponse.json()
+        throw new Error(`Ошибка перевода: ${error.error || 'Не удалось перевести статью'}`)
       }
 
-      const data = await response.json()
-      setResult(data.translation)
+      const translateData = await translateResponse.json()
+      
+      if (!translateData.translation || translateData.translation.trim().length === 0) {
+        throw new Error('Ошибка перевода: Получен пустой перевод')
+      }
+
+      setResult(translateData.translation)
     } catch (error) {
-      setResult(`Ошибка: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка'
+      setResult(`Ошибка: ${errorMessage}`)
+      console.error('Error in handleParseAndTranslate:', error)
     } finally {
       setLoading(false)
       setCurrentProcess(null)
@@ -239,23 +272,15 @@ export default function Home() {
 
         <div className="mb-6">
           <button
-            onClick={() => handleParse()}
+            onClick={handleParseAndTranslate}
             disabled={loading || !url.trim()}
-            title="Извлечь контент из статьи по указанному URL"
-            className="w-full px-6 py-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors mb-4"
+            title="Загрузить статью и перевести на русский язык"
+            className="w-full px-6 py-4 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors mb-4"
           >
-            Парсить статью
+            Парсить и перевести
           </button>
           
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-4">
-            <button
-              onClick={handleTranslate}
-              disabled={loading || !parsedData}
-              title="Перевести статью на русский язык"
-              className="px-6 py-4 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-            >
-              Перевести
-            </button>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
             <button
               onClick={() => handleSubmit('summary')}
               disabled={loading || !url.trim()}
@@ -365,7 +390,7 @@ export default function Home() {
             </div>
           ) : (
             <div className="text-center py-12 text-gray-400">
-              <p>Введите URL статьи и нажмите "Парсить статью"</p>
+              <p>Введите URL статьи и нажмите "Парсить и перевести"</p>
             </div>
           )}
         </div>
