@@ -14,6 +14,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [actionType, setActionType] = useState<string | null>(null)
   const [parsedData, setParsedData] = useState<ParsedData | null>(null)
+  const [currentProcess, setCurrentProcess] = useState<string | null>(null)
 
   const handleParse = async (showResult: boolean = true): Promise<ParsedData | undefined> => {
     if (!url.trim()) {
@@ -22,6 +23,7 @@ export default function Home() {
     }
 
     setLoading(true)
+    setCurrentProcess('Загружаю статью...')
     if (showResult) {
       setResult('')
     }
@@ -54,6 +56,7 @@ export default function Home() {
       throw error
     } finally {
       setLoading(false)
+      setCurrentProcess(null)
     }
   }
 
@@ -65,7 +68,8 @@ export default function Home() {
 
     setLoading(true)
     setActionType('translate')
-    setResult('Перевод...')
+    setCurrentProcess('Перевожу статью...')
+    setResult('')
 
     try {
       const response = await fetch('/api/translate', {
@@ -87,6 +91,7 @@ export default function Home() {
       setResult(`Ошибка: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setLoading(false)
+      setCurrentProcess(null)
     }
   }
 
@@ -100,6 +105,14 @@ export default function Home() {
     setActionType(action)
     setResult('')
     setLoading(true)
+    
+    // Устанавливаем процесс в зависимости от действия
+    const processMessages: Record<string, string> = {
+      summary: 'Анализирую статью...',
+      thesis: 'Создаю тезисы...',
+      telegram: 'Формирую пост для Telegram...'
+    }
+    setCurrentProcess(processMessages[action] || 'Обрабатываю...')
 
     try {
       // Сначала парсим статью (без отображения результата)
@@ -190,6 +203,7 @@ export default function Home() {
       console.error('Error in handleSubmit:', error)
     } finally {
       setLoading(false)
+      setCurrentProcess(null)
     }
   }
 
@@ -214,16 +228,20 @@ export default function Home() {
             type="url"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://example.com/article"
+            placeholder="Введите URL статьи, например: https://example.com/article"
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
             disabled={loading}
           />
+          <p className="mt-2 text-xs text-gray-500">
+            Укажите ссылку на англоязычную статью
+          </p>
         </div>
 
         <div className="mb-6">
           <button
             onClick={() => handleParse()}
             disabled={loading || !url.trim()}
+            title="Извлечь контент из статьи по указанному URL"
             className="w-full px-6 py-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors mb-4"
           >
             Парсить статью
@@ -233,6 +251,7 @@ export default function Home() {
             <button
               onClick={handleTranslate}
               disabled={loading || !parsedData}
+              title="Перевести статью на русский язык"
               className="px-6 py-4 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
             >
               Перевести
@@ -240,6 +259,7 @@ export default function Home() {
             <button
               onClick={() => handleSubmit('summary')}
               disabled={loading || !url.trim()}
+              title="Получить краткое описание статьи на русском языке"
               className="px-6 py-4 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
             >
               О чем статья?
@@ -247,6 +267,7 @@ export default function Home() {
             <button
               onClick={() => handleSubmit('thesis')}
               disabled={loading || !url.trim()}
+              title="Создать структурированный список ключевых тезисов статьи"
               className="px-6 py-4 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
             >
               Тезисы
@@ -254,12 +275,23 @@ export default function Home() {
             <button
               onClick={() => handleSubmit('telegram')}
               disabled={loading || !url.trim()}
+              title="Создать готовый пост для Telegram с ссылкой на источник"
               className="px-6 py-4 bg-teal-600 text-white rounded-lg font-medium hover:bg-teal-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
             >
               Пост для Telegram
             </button>
           </div>
         </div>
+
+        {/* Блок текущего процесса */}
+        {currentProcess && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+            <div className="flex items-center">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+              <span className="text-sm text-blue-800">{currentProcess}</span>
+            </div>
+          </div>
+        )}
 
         <div className="bg-white rounded-xl shadow-lg p-6 min-h-[300px]">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">
