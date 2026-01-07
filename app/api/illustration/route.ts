@@ -118,8 +118,9 @@ export async function POST(request: NextRequest) {
       
       console.log('Отправка запроса к Hugging Face с телом:', JSON.stringify({ ...requestBody, inputs: requestBody.inputs.substring(0, 100) + '...' }))
       
+      // Используем новый endpoint router.huggingface.co вместо устаревшего api-inference.huggingface.co
       imageResponse = await fetch(
-        `https://api-inference.huggingface.co/models/${modelName}`,
+        `https://router.huggingface.co/models/${modelName}`,
         {
           method: 'POST',
           headers: {
