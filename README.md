@@ -24,6 +24,8 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - **OpenRouter API ключ** - получить можно на сайте [https://openrouter.ai/](https://openrouter.ai/)
 - **Hugging Face API ключ** - получить можно на сайте [https://huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) (нужен токен с правами чтения)
 
+**Важно для Vercel:** На Vercel переменная окружения должна называться `HUGGING_FACE_API_KEY` (с подчеркиваниями). После добавления переменной на Vercel может потребоваться перезапуск деплоя.
+
 **Опционально:**
 - `OPENROUTER_MODEL` - модель для OpenRouter (по умолчанию: `deepseek/deepseek-chat`)
 - `HUGGING_FACE_MODEL` - модель для генерации изображений (по умолчанию: `stabilityai/stable-diffusion-xl-base-1.0`)

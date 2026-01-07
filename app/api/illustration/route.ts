@@ -15,7 +15,8 @@ export async function POST(request: NextRequest) {
     }
 
     const openRouterApiKey = process.env.OPENROUTER_API_KEY
-    const huggingFaceApiKey = process.env.HUGGING_FACE_API_KEY
+    // Поддерживаем оба варианта названия переменной для совместимости
+    const huggingFaceApiKey = process.env.HUGGING_FACE_API_KEY || process.env.HUGGINGFACE_API_KEY
 
     if (!openRouterApiKey) {
       return NextResponse.json(
