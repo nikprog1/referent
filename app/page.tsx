@@ -453,11 +453,24 @@ export default function Home() {
 
       if (!response.ok) {
         let apiError: unknown = null
+        let errorData: { error?: string } | null = null
         try {
-          apiError = await response.json()
+          errorData = await response.json()
+          apiError = errorData
         } catch {
           // Не удалось распарсить JSON ошибки
         }
+        
+        // Для иллюстраций используем детальное сообщение от API, если оно есть
+        if (action === 'illustration' && errorData?.error) {
+          const errorInfo: ErrorInfo = {
+            message: errorData.error,
+            stage: action
+          }
+          setError(errorInfo)
+          return
+        }
+        
         const errorInfo = getAIError(response, apiError, action)
         setError(errorInfo)
         return
@@ -473,6 +486,16 @@ export default function Home() {
       }
       
       if (data.error) {
+        // Для иллюстраций используем детальное сообщение от API
+        if (action === 'illustration') {
+          const errorInfo: ErrorInfo = {
+            message: data.error,
+            stage: action
+          }
+          setError(errorInfo)
+          return
+        }
+        
         const errorInfo = getAIError(response, new Error(data.error), action)
         setError(errorInfo)
         return
