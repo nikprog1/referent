@@ -31,6 +31,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Проверяем, работаем ли мы на localhost
+    const isLocalhost = process.env.NEXT_PUBLIC_APP_URL?.includes('localhost') || 
+                       process.env.NEXT_PUBLIC_APP_URL?.includes('127.0.0.1') ||
+                       !process.env.NEXT_PUBLIC_APP_URL
+
     // Ограничиваем длину контента для API
     const limitedContent = limitContent(content)
 
@@ -140,11 +145,22 @@ export async function POST(request: NextRequest) {
       // Hugging Face может вернуть ошибку в JSON или тексте
       let errorMessage = 'Ошибка при генерации изображения через Hugging Face API.'
       
-      // Обработка специфичных статусов
-      if (imageResponse.status === 503) {
+      // Проверяем, не заблокирован ли IP (403 или ошибка доступа)
+      const isAccessDenied = imageResponse.status === 403 || 
+                            errorText.toLowerCase().includes('forbidden') ||
+                            errorText.toLowerCase().includes('access denied') ||
+                            errorText.toLowerCase().includes('not allowed')
+      
+      if (isAccessDenied && isLocalhost) {
+        errorMessage = 'Hugging Face API недоступен с localhost из-за блокировки IP. Генерация иллюстраций работает только на Vercel (https://referent-steel.vercel.app/). На Vercel запросы идут с серверов Vercel, которые не заблокированы.'
+      } else if (imageResponse.status === 503) {
         errorMessage = 'Модель генерации изображений еще загружается. Подождите 10-30 секунд и попробуйте снова.'
       } else if (imageResponse.status === 401 || imageResponse.status === 403) {
-        errorMessage = 'Неверный Hugging Face API ключ. Проверьте файл .env.local и перезапустите сервер.'
+        if (isLocalhost) {
+          errorMessage = 'Hugging Face API недоступен с localhost из-за блокировки IP. Генерация иллюстраций работает только на Vercel (https://referent-steel.vercel.app/).'
+        } else {
+          errorMessage = 'Неверный Hugging Face API ключ. Проверьте файл .env.local и перезапустите сервер.'
+        }
       } else if (imageResponse.status === 429) {
         errorMessage = 'Превышен лимит запросов к Hugging Face API. Подождите немного и попробуйте снова.'
       } else if (imageResponse.status === 500 || imageResponse.status === 502) {
