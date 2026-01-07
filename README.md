@@ -12,14 +12,21 @@ npm install
 
 ### Настройка переменных окружения
 
-Создайте файл `.env.local` в корне проекта и добавьте ваш API ключ OpenRouter:
+Создайте файл `.env.local` в корне проекта и добавьте ваши API ключи:
 
 ```env
 OPENROUTER_API_KEY=your_api_key_here
+HUGGING_FACE_API_KEY=your_hugging_face_api_key_here
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-Получить API ключ можно на сайте [https://openrouter.ai/](https://openrouter.ai/)
+**API ключи:**
+- **OpenRouter API ключ** - получить можно на сайте [https://openrouter.ai/](https://openrouter.ai/)
+- **Hugging Face API ключ** - получить можно на сайте [https://huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) (нужен токен с правами чтения)
+
+**Опционально:**
+- `OPENROUTER_MODEL` - модель для OpenRouter (по умолчанию: `deepseek/deepseek-chat`)
+- `HUGGING_FACE_MODEL` - модель для генерации изображений (по умолчанию: `stabilityai/stable-diffusion-xl-base-1.0`)
 
 **Важно:** После создания или изменения файла `.env.local` необходимо перезапустить сервер разработки!
 
@@ -62,6 +69,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 - **О чем статья?** - краткое резюме статьи на русском языке
 - **Тезисы** - структурированный список ключевых тезисов
 - **Пост для Telegram** - готовый пост для публикации в Telegram
+- **Иллюстрация** - генерация изображения на основе статьи с помощью AI (OpenRouter + Hugging Face)
 
 ## Learn More
 

@@ -4,7 +4,7 @@
 
 export interface ErrorInfo {
   message: string
-  stage?: 'parsing' | 'translation' | 'summary' | 'thesis' | 'telegram'
+  stage?: 'parsing' | 'translation' | 'summary' | 'thesis' | 'telegram' | 'illustration'
 }
 
 /**
@@ -165,12 +165,13 @@ export function getTranslationError(response: Response | null, error: unknown): 
 export function getAIError(
   response: Response | null,
   error: unknown,
-  stage: 'summary' | 'thesis' | 'telegram'
+  stage: 'summary' | 'thesis' | 'telegram' | 'illustration'
 ): ErrorInfo {
   const stageNames = {
     summary: 'анализа',
     thesis: 'создания тезисов',
-    telegram: 'создания поста'
+    telegram: 'создания поста',
+    illustration: 'создания иллюстрации'
   }
 
   // Ошибки сети

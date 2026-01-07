@@ -13,6 +13,8 @@ interface ParsedData {
 export default function Home() {
   const [url, setUrl] = useState('')
   const [result, setResult] = useState('')
+  const [resultImage, setResultImage] = useState<string | null>(null) // Для изображений
+  const [imagePrompt, setImagePrompt] = useState<string | null>(null) // Промпт для изображения
   const [loading, setLoading] = useState(false)
   const [actionType, setActionType] = useState<string | null>(null)
   const [parsedData, setParsedData] = useState<ParsedData | null>(null)
@@ -23,17 +25,19 @@ export default function Home() {
 
   // Автоматическая прокрутка к результатам после успешной генерации
   useEffect(() => {
-    if (result && !loading && !error && resultRef.current) {
+    if ((result || resultImage) && !loading && !error && resultRef.current) {
       setTimeout(() => {
         resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
       }, 100)
     }
-  }, [result, loading, error])
+  }, [result, resultImage, loading, error])
 
   // Функция очистки всех состояний
   const handleClear = () => {
     setUrl('')
     setResult('')
+    setResultImage(null)
+    setImagePrompt(null)
     setLoading(false)
     setActionType(null)
     setParsedData(null)
@@ -44,6 +48,20 @@ export default function Home() {
 
   // Функция копирования результата
   const handleCopy = async () => {
+    if (resultImage) {
+      // Для изображений копируем промпт, если он есть
+      if (imagePrompt) {
+        try {
+          await navigator.clipboard.writeText(imagePrompt)
+          setCopied(true)
+          setTimeout(() => setCopied(false), 2000)
+        } catch (err) {
+          console.error('Ошибка при копировании промпта:', err)
+        }
+      }
+      return
+    }
+    
     if (!result) return
     
     try {
@@ -70,8 +88,32 @@ export default function Home() {
     }
   }
 
-  // Функция скачивания результата как .txt файла
+  // Функция скачивания результата как .txt файла или изображения
   const handleDownload = () => {
+    if (resultImage) {
+      // Для изображений скачиваем как PNG
+      const date = new Date().toISOString().split('T')[0] // YYYY-MM-DD
+      const fileName = `Иллюстрация_${date}.png`
+      
+      // Конвертируем data URL в blob
+      fetch(resultImage)
+        .then(res => res.blob())
+        .then(blob => {
+          const url = URL.createObjectURL(blob)
+          const link = document.createElement('a')
+          link.href = url
+          link.download = fileName
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          URL.revokeObjectURL(url)
+        })
+        .catch(err => {
+          console.error('Ошибка при скачивании изображения:', err)
+        })
+      return
+    }
+
     if (!result) return
 
     // Определяем имя файла на основе типа действия и даты
@@ -275,7 +317,7 @@ export default function Home() {
     }
   }
 
-  const handleSubmit = async (action: 'summary' | 'thesis' | 'telegram') => {
+  const handleSubmit = async (action: 'summary' | 'thesis' | 'telegram' | 'illustration') => {
     if (!url.trim()) {
       alert('Пожалуйста, введите URL статьи')
       return
@@ -284,6 +326,8 @@ export default function Home() {
     // Очищаем предыдущие результаты
     setActionType(action)
     setResult('')
+    setResultImage(null)
+    setImagePrompt(null)
     setError(null)
     setLoading(true)
     
@@ -291,7 +335,8 @@ export default function Home() {
     const processMessages: Record<string, string> = {
       summary: 'Анализирую статью...',
       thesis: 'Создаю тезисы...',
-      telegram: 'Формирую пост для Telegram...'
+      telegram: 'Формирую пост для Telegram...',
+      illustration: 'Создаю иллюстрацию...'
     }
     setCurrentProcess(processMessages[action] || 'Обрабатываю...')
 
@@ -364,6 +409,9 @@ export default function Home() {
         case 'telegram':
           endpoint = '/api/telegram'
           break
+        case 'illustration':
+          endpoint = '/api/illustration'
+          break
         default:
           const errorInfo: ErrorInfo = {
             message: 'Неизвестное действие.',
@@ -430,16 +478,33 @@ export default function Home() {
         return
       }
       
-      if (!data.result || data.result.trim().length === 0) {
-        const errorInfo: ErrorInfo = {
-          message: 'Получен пустой результат. Попробуйте еще раз.',
-          stage: action
+      // Для иллюстраций обрабатываем изображение
+      if (action === 'illustration') {
+        if (!data.result || !data.result.startsWith('data:image/')) {
+          const errorInfo: ErrorInfo = {
+            message: 'Получен некорректный результат изображения. Попробуйте еще раз.',
+            stage: action
+          }
+          setError(errorInfo)
+          return
         }
-        setError(errorInfo)
-        return
+        setResultImage(data.result)
+        setImagePrompt(data.prompt || null)
+        setResult('') // Очищаем текстовый результат
+      } else {
+        // Для текстовых результатов
+        if (!data.result || data.result.trim().length === 0) {
+          const errorInfo: ErrorInfo = {
+            message: 'Получен пустой результат. Попробуйте еще раз.',
+            stage: action
+          }
+          setError(errorInfo)
+          return
+        }
+        setResult(data.result)
+        setResultImage(null) // Очищаем изображение
       }
       
-      setResult(data.result)
       setError(null)
     } catch (error) {
       // Неожиданная ошибка
@@ -495,7 +560,7 @@ export default function Home() {
             Парсить и перевести
           </button>
           
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4">
             <button
               onClick={() => handleSubmit('summary')}
               disabled={loading || !url.trim()}
@@ -519,6 +584,14 @@ export default function Home() {
               className="w-full px-4 sm:px-6 py-3 sm:py-4 bg-teal-600 text-white text-sm sm:text-base rounded-lg font-medium hover:bg-teal-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
             >
               Пост для Telegram
+            </button>
+            <button
+              onClick={() => handleSubmit('illustration')}
+              disabled={loading || !url.trim()}
+              title="Создать иллюстрацию на основе статьи с помощью AI"
+              className="w-full px-4 sm:px-6 py-3 sm:py-4 bg-pink-600 text-white text-sm sm:text-base rounded-lg font-medium hover:bg-pink-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            >
+              Иллюстрация
             </button>
           </div>
           
@@ -551,6 +624,7 @@ export default function Home() {
               {error.stage === 'summary' && 'Ошибка анализа'}
               {error.stage === 'thesis' && 'Ошибка создания тезисов'}
               {error.stage === 'telegram' && 'Ошибка создания поста'}
+              {error.stage === 'illustration' && 'Ошибка создания иллюстрации'}
               {!error.stage && 'Ошибка'}
             </AlertTitle>
             <AlertDescription className="break-words">{error.message}</AlertDescription>
@@ -566,15 +640,16 @@ export default function Home() {
                   ({actionType === 'translate' && 'Перевод'}
                   {actionType === 'summary' && 'О чем статья?'}
                   {actionType === 'thesis' && 'Тезисы'}
-                  {actionType === 'telegram' && 'Пост для Telegram'})
+                  {actionType === 'telegram' && 'Пост для Telegram'}
+                  {actionType === 'illustration' && 'Иллюстрация'})
                 </span>
               )}
             </h2>
-            {result && !loading && (
+            {(result || resultImage) && !loading && (
               <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 self-start sm:self-auto">
                 <button
                   onClick={handleCopy}
-                  title="Копировать результат"
+                  title={resultImage ? "Копировать промпт изображения" : "Копировать результат"}
                   className="px-3 sm:px-4 py-2 bg-blue-600 text-white text-xs sm:text-sm rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
                 >
                   {copied ? (
@@ -597,13 +672,13 @@ export default function Home() {
                 </button>
                 <button
                   onClick={handleDownload}
-                  title="Скачать результат как .txt файл"
+                  title={resultImage ? "Скачать изображение" : "Скачать результат как .txt файл"}
                   className="px-3 sm:px-4 py-2 bg-green-600 text-white text-xs sm:text-sm rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
-                  <span className="hidden sm:inline">Скачать .txt</span>
+                  <span className="hidden sm:inline">{resultImage ? 'Скачать PNG' : 'Скачать .txt'}</span>
                   <span className="sm:hidden">Скачать</span>
                 </button>
               </div>
@@ -614,6 +689,25 @@ export default function Home() {
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-indigo-600"></div>
               <span className="ml-4 text-sm sm:text-base text-gray-600">Обработка...</span>
+            </div>
+          ) : resultImage ? (
+            <div className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200">
+              <div className="space-y-4">
+                {imagePrompt && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-xs font-semibold text-blue-800 mb-1">Промпт для генерации:</p>
+                    <p className="text-sm text-blue-700 break-words">{imagePrompt}</p>
+                  </div>
+                )}
+                <div className="flex justify-center">
+                  <img
+                    src={resultImage}
+                    alt="Сгенерированная иллюстрация"
+                    className="max-w-full h-auto rounded-lg shadow-md"
+                    style={{ maxHeight: '600px' }}
+                  />
+                </div>
+              </div>
             </div>
           ) : result ? (
             <div className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200">
