@@ -1,28 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { validateContent, limitContent, handleOpenRouterError } from './utils/errorHandler'
 
 export async function POST(request: NextRequest) {
   try {
     const { content } = await request.json()
 
-    if (!content || typeof content !== 'string') {
+    // Валидация входных данных
+    const validation = validateContent(content)
+    if (!validation.isValid) {
       return NextResponse.json(
-        { error: 'Content is required' },
+        { error: validation.error },
         { status: 400 }
       )
     }
 
     const apiKey = process.env.OPENROUTER_API_KEY
 
-    // Отладочная информация (удалить в продакшене)
-    console.log('OPENROUTER_API_KEY exists:', !!apiKey)
-    console.log('API Key length:', apiKey?.length || 0)
-
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'OpenRouter API key is not configured. Please check .env.local file and restart the server.' },
+        { error: 'OpenRouter API ключ не настроен. Проверьте файл .env.local и перезапустите сервер.' },
         { status: 500 }
       )
     }
+
+    // Ограничиваем длину контента для API
+    const limitedContent = limitContent(content)
 
     // Отправляем запрос к OpenRouter API
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -34,7 +36,7 @@ export async function POST(request: NextRequest) {
         'X-Title': 'Referent - Article Translator',
       },
       body: JSON.stringify({
-        model: 'deepseek/deepseek-chat',
+        model: process.env.OPENROUTER_MODEL || 'deepseek/deepseek-chat',
         messages: [
           {
             role: 'system',
@@ -42,7 +44,7 @@ export async function POST(request: NextRequest) {
           },
           {
             role: 'user',
-            content: `Translate this article to Russian:\n\n${content}`,
+            content: `Translate this article to Russian:\n\n${limitedContent}`,
           },
         ],
       }),
@@ -51,30 +53,34 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
       console.error('OpenRouter API error:', errorData)
-      return NextResponse.json(
-        { error: `Translation failed: ${errorData.error?.message || response.statusText}` },
-        { status: response.status }
-      )
+      return handleOpenRouterError(errorData, response.status, response.statusText)
     }
 
     const data = await response.json()
 
     if (!data.choices || !data.choices[0] || !data.choices[0].message) {
       return NextResponse.json(
-        { error: 'Invalid response from translation service' },
+        { error: 'Некорректный ответ от сервиса перевода. Попробуйте еще раз.' },
         { status: 500 }
       )
     }
 
-    const translation = data.choices[0].message.content
+    const translation = data.choices[0].message.content.trim()
+
+    if (!translation || translation.length === 0) {
+      return NextResponse.json(
+        { error: 'Сервис перевода вернул пустой результат. Попробуйте еще раз.' },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json({
-      translation: translation.trim(),
+      translation: translation,
     })
   } catch (error) {
     console.error('Translation error:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Unknown error' },
+      { error: error instanceof Error ? `Ошибка при переводе: ${error.message}` : 'Неизвестная ошибка при обработке запроса' },
       { status: 500 }
     )
   }

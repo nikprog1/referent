@@ -273,11 +273,24 @@ export default function Home() {
 
       if (!translateResponse.ok) {
         let apiError: unknown = null
+        let errorData: { error?: string } | null = null
         try {
-          apiError = await translateResponse.json()
+          errorData = await translateResponse.json()
+          apiError = errorData
         } catch {
           // Не удалось распарсить JSON ошибки
         }
+        
+        // Если API вернул детальное сообщение об ошибке, используем его
+        if (errorData?.error) {
+          const errorInfo: ErrorInfo = {
+            message: errorData.error,
+            stage: 'translation'
+          }
+          setError(errorInfo)
+          return
+        }
+        
         const errorInfo = getTranslationError(translateResponse, apiError)
         setError(errorInfo)
         return
