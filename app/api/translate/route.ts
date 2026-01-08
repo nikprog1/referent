@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         // Используем бесплатную/доступную модель по умолчанию
-        model: process.env.OPENROUTER_MODEL || 'deepseek/deepseek-r1',
+        model: process.env.OPENROUTER_MODEL || 'deepseek/deepseek-chat',
         messages: [
           {
             role: 'system',

@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
         'X-Title': 'Referent - Article Summary',
       },
       body: JSON.stringify({
-        model: process.env.OPENROUTER_MODEL || 'deepseek/deepseek-r1',
+        model: process.env.OPENROUTER_MODEL || 'deepseek/deepseek-chat',
         messages: [
           {
             role: 'system',
