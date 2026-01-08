@@ -25,6 +25,14 @@ export function handleOpenRouterError(
     )
   }
   
+  // Ошибка 402 - Payment Required (нет средств или тарифа)
+  if (responseStatus === 402) {
+    return NextResponse.json(
+      { error: 'На аккаунте OpenRouter нет доступного тарифа или закончились средства (код 402). Зайдите в личный кабинет OpenRouter (https://openrouter.ai/keys) и проверьте раздел Billing/Payments. Убедитесь, что у вас есть активный тариф или кредиты.' },
+      { status: responseStatus }
+    )
+  }
+  
   // Превышение лимита запросов
   if (errorMessage.includes('rate limit') || errorMessage.includes('quota') || errorMessage.includes('limit')) {
     return NextResponse.json(

@@ -90,6 +90,11 @@ export function getTranslationError(response: Response | null, error: unknown): 
   // HTTP ошибки
   if (response) {
     switch (response.status) {
+      case 402:
+        return {
+          message: 'Ошибка перевода: на аккаунте OpenRouter нет доступного тарифа или закончились средства (код 402). Зайдите в личный кабинет OpenRouter и проверьте раздел Billing/Payments.',
+          stage: 'translation'
+        }
       case 400:
         return {
           message: 'Ошибка перевода: неверный запрос. Возможно, статья слишком длинная или пустая.',

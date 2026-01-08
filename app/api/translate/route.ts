@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { validateContent, limitContent, handleOpenRouterError } from './utils/errorHandler'
+import { validateContent, limitContent, handleOpenRouterError } from '../utils/errorHandler'
 
 export async function POST(request: NextRequest) {
   try {
