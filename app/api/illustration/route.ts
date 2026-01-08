@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
         'X-Title': 'Referent - Illustration Prompt',
       },
       body: JSON.stringify({
-        model: process.env.OPENROUTER_MODEL || 'deepseek/deepseek-v3-base-free',
+        model: process.env.OPENROUTER_MODEL || 'deepseek/deepseek-v3-base:free',
         messages: [
           {
             role: 'system',
