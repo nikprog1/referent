@@ -36,7 +36,8 @@ export async function POST(request: NextRequest) {
         'X-Title': 'Referent - Article Translator',
       },
       body: JSON.stringify({
-        model: process.env.OPENROUTER_MODEL || 'deepseek/deepseek-chat',
+        // Используем бесплатную/доступную модель по умолчанию
+        model: process.env.OPENROUTER_MODEL || 'deepseek/deepseek-chat:free',
         messages: [
           {
             role: 'system',

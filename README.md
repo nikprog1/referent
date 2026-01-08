@@ -27,7 +27,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 **Важно для Vercel:** На Vercel переменная окружения должна называться `HUGGING_FACE_API_KEY` (с подчеркиваниями). После добавления переменной на Vercel может потребоваться перезапуск деплоя.
 
 **Опционально:**
-- `OPENROUTER_MODEL` - модель для OpenRouter (по умолчанию: `deepseek/deepseek-chat`)
+- `OPENROUTER_MODEL` - модель для OpenRouter (по умолчанию: `deepseek/deepseek-chat:free` - бесплатная версия)
 - `HUGGING_FACE_MODEL` - модель для генерации изображений (по умолчанию: `stabilityai/stable-diffusion-xl-base-1.0`)
 
 **Важно:** После создания или изменения файла `.env.local` необходимо перезапустить сервер разработки!
